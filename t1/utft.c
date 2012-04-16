@@ -127,6 +127,7 @@ static int parse_32_lit (unsigned int c, unsigned char conv[]){
             break;
         case 2:
 //            puts("On inter 2:");
+
             conv[0] = (ch[0] >> 6) | (ch[1] << 2) | 0xc0u;
             conv[1] = (ch[0] & 0x3fu) | 0x80u;
             conv[2] = 0;     //EOS
@@ -140,6 +141,9 @@ static int parse_32_lit (unsigned int c, unsigned char conv[]){
 //            getchar();
             break;
         case 3:
+            conv[0] = ((ch[1] & 0xf0u) >> 4) | 0xe0u;
+            conv[1] = (ch[0] >> 6) | ((ch[1] & 0x0fu) << 2) | 0x80u;
+            conv[2] = (ch[0] & 0x3fu) | 0x80u;
             conv[3] = 0;     //EOS
             break;
         case 4:
