@@ -86,8 +86,8 @@ static size_t fread_32(FILE *f, void *arr){
     return fread(arr, 4, 1, f);
 }
 
-static int next_char_32(FILE *in_file){
-    int c;
+static unsigned int next_char_32(FILE *in_file){
+    unsigned int c;
     fread_32(in_file, &c);
     if (ferror(in_file)){ //error
         perror("Erro ao ler arquivo:\n");
@@ -98,37 +98,52 @@ static int next_char_32(FILE *in_file){
     return c;
 }
 
-static int interval_32 (int c){
+static int interval_32_lit (unsigned int c){
     int ret;
-    if      (c < 0 || c > 0x10ffff) { //out of bounds
+    if      (c < 0 || c > 0x10ffffu) { //out of bounds
+        dump_char(&c, sizeof(c), NULL);
+        printf("%x\n", c);
         ret = ERR_PARSE;
     }
-    else if (c <= 0x007f)
+    else if (c <= 0x007fu)
         ret = 1;
-    else if (c <= 0x07ff)
+    else if (c <= 0x07ffu)
         ret = 2;
     else if (c <= 0xffff)
         ret = 3;
-    else if (c <= 0x10ffff)
+    else if (c <= 0x10ffffu)
         ret = 4;
     return ret;
 }
 
-static int parse_32_lit (int c, unsigned char conv[]){
-    int inter = interval_32(c);
+static int parse_32_lit (unsigned int c, unsigned char conv[]){
+    int inter = interval_32_lit(c);
+    unsigned char * ch = (unsigned char*)&c;
+
     switch(inter) {
         case 1:
-            conv[0] = 0 | c; //begins with 0 and the rest is the utf code
+            conv[0] = 0 | ch[0]; //begins with 0 and the rest is the utf code
             conv[1] = 0;     //EOS
             break;
         case 2:
-            conv[3] = 0;     //EOS
+//            puts("On inter 2:");
+            conv[0] = (ch[0] >> 6) | (ch[1] << 2) | 0xc0u;
+            conv[1] = (ch[0] & 0x3fu) | 0x80u;
+            conv[2] = 0;     //EOS
+
+//            printf("c:    ");
+//            dump_char(&c, sizeof(c), NULL);
+//            printf("ch:   ");
+//            dump_char(ch, 2, NULL);
+//            printf("conv: ");
+//            dump_char(conv, 2, NULL);
+//            getchar();
             break;
         case 3:
-            conv[4] = 0;     //EOS
+            conv[3] = 0;     //EOS
             break;
         case 4:
-            conv[5] = 0;     //EOS
+            conv[4] = 0;     //EOS
             break;
         default:
             break;
@@ -139,9 +154,10 @@ static int parse_32_lit (int c, unsigned char conv[]){
 
 int utf32_8(FILE *in_file, FILE *out_file){
     char end;
-    int r_char;
+    unsigned int r_char;
     unsigned char conv[5]; // maximum of 4 bytes in a utf-8 + EOS
 
+    end = endian(in_file);
     r_char = next_char_32(in_file);
     while (r_char != EOF) {
         if (r_char == ERR_READ) //could not read
