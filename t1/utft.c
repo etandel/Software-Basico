@@ -1,5 +1,7 @@
-/* TODO: Finish parse_32 
- * TODO: Test   parse_32
+/* TODO: Finish parse_32_lit 
+ * TODO: Test   parse_32_lit
+ * TODO: Finish parse_32_big 
+ * TODO: Test   parse_32_big
  * TODO: Finish utf32_8
  * TODO: Test   utf32_8
  * TODO: Finish utf8_32
@@ -36,10 +38,6 @@ void dump (void *p, int n) {
     p1++;
   }
   puts("");
-}
-
-static size_t fread_32(FILE *f, void *arr){
-    return fread(arr, 4, 1, f);
 }
 
 static char endian(FILE * f){
@@ -83,6 +81,11 @@ static char endian(FILE * f){
     return ret;
 }
 
+static size_t fread_32(FILE *f, void *arr){
+    //reads 1 array of 4 bytes from f and store it in arr
+    return fread(arr, 4, 1, f);
+}
+
 static int next_char_32(FILE *in_file){
     int c;
     fread_32(in_file, &c);
@@ -111,7 +114,7 @@ static int interval_32 (int c){
     return ret;
 }
 
-static int parse_32 (int c, unsigned char conv[]){
+static int parse_32_lit (int c, unsigned char conv[]){
     int inter = interval_32(c);
     switch(inter) {
         case 1:
@@ -139,31 +142,23 @@ int utf32_8(FILE *in_file, FILE *out_file){
     int r_char;
     unsigned char conv[5]; // maximum of 4 bytes in a utf-8 + EOS
 
-    //puts("On utf32_8");
-
-    //end = endian(in_file);
-    //printf("Endian: %c\n", end);
-
     r_char = next_char_32(in_file);
-    //printf("Next char: "); dump_char(&r_char, sizeof(r_char), NULL);
     while (r_char != EOF) {
         if (r_char == ERR_READ) //could not read
             return -1;
 
-        if (!parse_32(r_char, conv)){ // bad character
+        if (!parse_32_lit(r_char, conv)){ // bad character
             long int pos = ftell(in_file);
             fprintf(stderr, "Erro! Caracter UTF-32 invalido na posicao %ld.\n", pos);
-            dump_char(&r_char, sizeof(r_char), NULL);
             return -1;
         }
-//
+
 //        //fprintf(out_file, "%s", conv);
 //        if (ferror(out_file)){ //could not write
 //            perror("Erro ao escrever arquivo:\n");
 //            return -1;
 //        }
-//
-        dump_char(&r_char, sizeof(r_char), NULL);
+
         r_char = next_char_32(in_file);
     }
 
