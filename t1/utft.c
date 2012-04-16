@@ -1,5 +1,4 @@
-/* TODO: Finish parse_32_lit 
- * TODO: Test   parse_32_lit
+/* TODO: Test   parse_32_lit -> inter 4
  * TODO: Finish parse_32_big 
  * TODO: Test   parse_32_big
  * TODO: Finish utf32_8
@@ -126,19 +125,9 @@ static int parse_32_lit (unsigned int c, unsigned char conv[]){
             conv[1] = 0;     //EOS
             break;
         case 2:
-//            puts("On inter 2:");
-
             conv[0] = (ch[0] >> 6) | (ch[1] << 2) | 0xc0u;
             conv[1] = (ch[0] & 0x3fu) | 0x80u;
             conv[2] = 0;     //EOS
-
-//            printf("c:    ");
-//            dump_char(&c, sizeof(c), NULL);
-//            printf("ch:   ");
-//            dump_char(ch, 2, NULL);
-//            printf("conv: ");
-//            dump_char(conv, 2, NULL);
-//            getchar();
             break;
         case 3:
             conv[0] = ((ch[1] & 0xf0u) >> 4) | 0xe0u;
@@ -147,6 +136,10 @@ static int parse_32_lit (unsigned int c, unsigned char conv[]){
             conv[3] = 0;     //EOS
             break;
         case 4:
+            conv[0] = ((ch[2] & 0x1cu) >> 2) | 0xf0u;
+            conv[1] = ((ch[1] & 0xf0u) >> 4) | (ch[2] & 0x03u) | 0x80u ;
+            conv[2] = (ch[0] >> 6) | ((ch[1] & 0x0fu) << 2) | 0x80u;
+            conv[3] = (ch[0] & 0x3fu) | 0x80u;
             conv[4] = 0;     //EOS
             break;
         default:
