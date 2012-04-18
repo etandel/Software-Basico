@@ -191,3 +191,30 @@ int utf32_8(FILE *in_file, FILE *out_file){
 
     return 0;
 }
+
+/****************** Begin utf8_32 *******************/
+
+static int next_char_8(FILE * f, unsigned char c[]){
+    //TODO: Needs testing;
+    int err;
+    unsigned char r_char, nbytes, mask;
+
+    r_char = c[0] = fgetc(f);
+
+    //checks for errors / EOF
+    if ((err = get_err(f)) != SUCCESS)
+        return err;
+
+    //counts number of bytes on utf8 character
+    for (nbytes=0, mask=0x80u; r_char & mask; mask>>=1, nbytes++);
+    nbytes = nbytes ? nbytes : nbytes+1; // if only one byte, for won't loop
+
+    //reads nbytes-1, because of fgetc on start of this function
+    fread(c+1, 1, nbytes-1, f);
+
+    return nbytes;
+}
+
+int utf8_32(FILE *in_file, FILE *out_file, int order){
+    return 0;
+}
