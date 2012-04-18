@@ -78,7 +78,7 @@ static char endian(FILE * f){
 
 static size_t fread_32(FILE *f, void *arr){
     //reads 1 array of 4 bytes from f and store it in arr
-    return fread(arr, 4, 1, f);
+    return fread(arr, 1, 4, f);
 }
 
 static unsigned int next_char_32(FILE *in_file){
