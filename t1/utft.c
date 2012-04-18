@@ -1,8 +1,4 @@
-/* TODO: Test   parse_32_lit -> inter 4
- * TODO: Finish parse_32_big 
- * TODO: Test   parse_32_big
- * TODO: Finish utf32_8
- * TODO: Test   utf32_8
+/* 
  * TODO: Finish utf8_32
  * TODO: Test   utf8_32
 */
@@ -149,32 +145,43 @@ static int parse_32_lit (unsigned int c, unsigned char conv[]){
     return inter;           
 }
 
+static int big2lit (unsigned int c){
+    unsigned char new[4], *real = (unsigned char*)&c; 
+    int i;
+    for (i=0; i<4; i++)
+        new[3-i] = real[i];
+    return *(unsigned int *)new;
+}
+static int parse_32_big(unsigned int c, unsigned char conv[]){
+    return parse_32_lit(big2lit(c), conv);
+}
+
 int utf32_8(FILE *in_file, FILE *out_file){
-    char end;
     unsigned int r_char;
     unsigned char conv[5]; // maximum of 4 bytes in a utf-8 + EOS
+    int (*parse_32)(unsigned int, unsigned char []);
 
-    end = endian(in_file);
+    parse_32 = endian(in_file) == 'L' ? parse_32_lit : parse_32_big;
+
     r_char = next_char_32(in_file);
     while (r_char != EOF) {
         if (r_char == ERR_READ) //could not read
             return -1;
 
-        if (!parse_32_lit(r_char, conv)){ // bad character
+        if (!parse_32(r_char, conv)){ // bad character
             long int pos = ftell(in_file);
             fprintf(stderr, "Erro! Caracter UTF-32 invalido na posicao %ld.\n", pos);
             return -1;
         }
 
-//        //fprintf(out_file, "%s", conv);
-//        if (ferror(out_file)){ //could not write
-//            perror("Erro ao escrever arquivo:\n");
-//            return -1;
-//        }
+        fprintf(out_file, "%s", conv);
+        if (ferror(out_file)){ //could not write
+            perror("Erro ao escrever arquivo:\n");
+            return -1;
+        }
 
         r_char = next_char_32(in_file);
     }
-
 
     return 0;
 }
