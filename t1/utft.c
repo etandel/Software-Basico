@@ -10,11 +10,9 @@
 // so are they (though EOF is usually -1)
 #define ERR_READ  EOF-1 // probably -2
 #define ERR_WRITE EOF-2 // probably -3
-#define ERR_PARSE 0    // error when read character is not valid UTF
-#define ERR_END   EOF-3    // error when file's endian is not valid
-
-//int utf8_32(FILE *in_file, FILE *out_file, int order){
-//}
+#define ERR_PARSE 0     // error when read character is not valid UTF
+#define ERR_END   EOF-3 // error when file's endian is not valid
+#define SUCCESS   1     //everything went smooth
 
 void dump_char (void *p, int n, char *sep) {
   unsigned char *p1 = p;
@@ -35,24 +33,32 @@ void dump (void *p, int n) {
   puts("");
 }
 
+static size_t fread_32(FILE *f, void *arr){
+    //reads 1 array of 4 bytes from f and store it in arr
+    return fread(arr, 1, 4, f);
+}
+
+static int get_err(FILE *f){
+    int err = SUCCESS;
+    if (ferror(f)){
+        perror("Erro ao ler arquivo:\n");
+        err = ERR_READ;
+    }
+    else if (feof(f))
+        err = EOF;
+    return err;
+}
+
 static char endian(FILE * f){
     char ret;
     char read[4];
     char big[4] = {'\0'  , '\0'  , '\376', '\377'};
     char lit[4] = {'\377', '\376', '\0'  , '\0'};
     
-    // read 1 array of 4 bytes from f and store it on read
-    fread(read, 4, 1, f); 
+    fread_32(f, read);
 
-    //check for errors / EOF
-    if (ferror(f)){
-        perror("Erro ao ler arquivo:\n");
-        ret = ERR_READ;
-    }
-    else if (feof(f))
-        ret = EOF;
     //if everything's ok
-    else{
+    if ((ret = get_err(f)) == SUCCESS){
         int i;
         char * expected;
 
@@ -76,20 +82,12 @@ static char endian(FILE * f){
     return ret;
 }
 
-static size_t fread_32(FILE *f, void *arr){
-    //reads 1 array of 4 bytes from f and store it in arr
-    return fread(arr, 1, 4, f);
-}
-
 static unsigned int next_char_32(FILE *in_file){
     unsigned int c;
+    int err;
     fread_32(in_file, &c);
-    if (ferror(in_file)){ //error
-        perror("Erro ao ler arquivo:\n");
-        c = ERR_READ;
-    }
-    else if (feof(in_file))  //end of file
-        c = EOF;
+    if ((err = get_err(in_file)) != SUCCESS)
+        return err;
     return c;
 }
 
@@ -161,7 +159,15 @@ int utf32_8(FILE *in_file, FILE *out_file){
     unsigned char conv[5]; // maximum of 4 bytes in a utf-8 + EOS
     int (*parse_32)(unsigned int, unsigned char []);
 
-    parse_32 = endian(in_file) == 'L' ? parse_32_lit : parse_32_big;
+    // sets callback accordingly while checking for possible errors
+    switch(endian(in_file)){
+        case 'L':
+            parse_32 = parse_32_lit; break;
+        case 'B':
+            parse_32 = parse_32_big; break;
+        default:
+            return -1;
+    }
 
     r_char = next_char_32(in_file);
     while (r_char != EOF) {
