@@ -175,8 +175,7 @@ int utf32_8(FILE *in_file, FILE *out_file){
             return -1;
 
         if (!parse_32(r_char, conv)){ // bad character
-            long int pos = ftell(in_file);
-            fprintf(stderr, "Erro! Caracter UTF-32 invalido na posicao %ld.\n", pos);
+            fprintf(stderr, "Erro! Caracter UTF-32 invalido na posicao %ld:\n  %.8x", ftell(in_file), r_char);
             return -1;
         }
 
@@ -196,8 +195,8 @@ int utf32_8(FILE *in_file, FILE *out_file){
 
 static int next_char_8(FILE * f, unsigned char c[]){
     //TODO: Needs testing;
-    int err;
     unsigned char r_char, nbytes, mask;
+    int err;
 
     r_char = c[0] = fgetc(f);
 
@@ -207,14 +206,30 @@ static int next_char_8(FILE * f, unsigned char c[]){
 
     //counts number of bytes on utf8 character
     for (nbytes=0, mask=0x80u; r_char & mask; mask>>=1, nbytes++);
-    nbytes = nbytes ? nbytes : nbytes+1; // if only one byte, for won't loop
+    //invalid char or something went wrong
+    if (nbytes > 4){
+        fprintf(stderr, "Erro! Caracter UTF-8 invalido na posicao %ld:\n", ftell(f));
+        return ERR_PARSE;
+    }
 
+    // if only one byte, for won't loop, so nbyte will be 0
+    nbytes = nbytes ? nbytes : nbytes+1;
     //reads nbytes-1, because of fgetc on start of this function
     fread(c+1, 1, nbytes-1, f);
+    if ((err = get_err(f)) != SUCCESS)
+        return err;
 
     return nbytes;
 }
 
 int utf8_32(FILE *in_file, FILE *out_file, int order){
+    unsigned char r_char[4];
+    int r_nbytes;
+
+    r_nbytes = next_char_8(in_file, r_char);
+    while(!(feof(in_file) || r_nbytes >= 0)){
+        r_nbytes = next_char_8(in_file, r_char);
+    }
+
     return 0;
 }
