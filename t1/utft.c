@@ -5,6 +5,7 @@
 
 #include "utft.h"
 #include <stdio.h>
+#include <string.h>
 
 // macros for errors; since EOF is system dependent,
 // so are they (though EOF is usually -1)
@@ -182,7 +183,6 @@ int utf32_8(FILE *in_file, FILE *out_file){
             perror("Erro ao escrever arquivo:\n");
             return -1;
         }
-
         r_char = next_char_32(in_file);
     }
 
@@ -191,10 +191,34 @@ int utf32_8(FILE *in_file, FILE *out_file){
 
 /****************** Begin utf8_32 *******************/
 
+static int parse_8_2lit(unsigned char r_char[], int r_nbytes, unsigned char conv[]){
+    switch(r_nbytes){
+        case 1:
+            memset(conv, 0, 3); //first 3 bytes are 0
+            conv[3] = r_char[0];
+            break;
+        case 2:
+            memset(conv, 0, 2); //first two bytes are 0
+            conv[2] = (r_char[0] >> 2) & 0x07u;
+            conv[3] = ((r_char[0] & 0x03u) << 6) | (r_char[1] & 0x3fu);
+
+            printf("Got:  "); dump_char(r_char, r_nbytes, NULL);
+            printf("Conv: "); dump_char(conv, 4, NULL);
+            getchar();
+            break;
+        case 3:
+        case 4:
+            break;
+    }
+    conv[4] = '\0';
+
+    return SUCCESS;
+}
+
 static int next_char_8(FILE * f, unsigned char c[]){
-    //TODO: Needs testing;
-    unsigned char r_char, nbytes, mask;
-    int err;
+    //TODO: Needs better testing;
+    unsigned char r_char, mask;
+    int err, nbytes;
 
     r_char = c[0] = fgetc(f);
 
@@ -210,7 +234,7 @@ static int next_char_8(FILE * f, unsigned char c[]){
         return ERR_PARSE;
     }
 
-    // if only one byte, for won't loop, so nbyte will be 0
+    // if only one byte, for won't loop, so nbytes will be 0
     nbytes = nbytes ? nbytes : nbytes+1;
     //reads nbytes-1, because of fgetc on start of this function
     fread(c+1, 1, nbytes-1, f);
@@ -221,12 +245,20 @@ static int next_char_8(FILE * f, unsigned char c[]){
 }
 
 int utf8_32(FILE *in_file, FILE *out_file, int order){
-    unsigned char r_char[4];
+    unsigned char r_char[4], conv[5];
     int r_nbytes;
 
-    r_nbytes = next_char_8(in_file, r_char);
-    while(!(feof(in_file) || r_nbytes >= 0)){
-        r_nbytes = next_char_8(in_file, r_char);
+    if ((r_nbytes = next_char_8(in_file, r_char)) < 0)
+        return -1;  
+
+    while(!(feof(in_file))){
+        if (parse_8_2lit(r_char, r_nbytes, conv) == ERR_PARSE){
+            fprintf(stderr, "Erro! Caracter UTF-8 invalido na posicao %ld:\n", ftell(in_file));
+            return -1;
+        }
+
+        if ((r_nbytes = next_char_8(in_file, r_char)) < 0)
+            return -1;  
     }
 
     return 0;
