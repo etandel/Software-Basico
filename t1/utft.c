@@ -94,8 +94,6 @@ static unsigned int next_char_32(FILE *in_file){
 static int interval_32_lit (unsigned int c){
     int ret;
     if      (c < 0 || c > 0x10ffffu) { //out of bounds
-        dump_char(&c, sizeof(c), NULL);
-        printf("%x\n", c);
         ret = ERR_PARSE;
     }
     else if (c <= 0x007fu)
@@ -174,8 +172,8 @@ int utf32_8(FILE *in_file, FILE *out_file){
         if (r_char == ERR_READ) //could not read
             return -1;
 
-        if (!parse_32(r_char, conv)){ // bad character
-            fprintf(stderr, "Erro! Caracter UTF-32 invalido na posicao %ld:\n  %.8x", ftell(in_file), r_char);
+        if (parse_32(r_char, conv) == ERR_PARSE){ // bad character
+            fprintf(stderr, "Erro! Caracter UTF-32 invalido na posicao %ld: %.8x\n", ftell(in_file), r_char);
             return -1;
         }
 
