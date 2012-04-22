@@ -1,6 +1,6 @@
 /* 
- * TODO: Finish utf8_32
- * TODO: Test   utf8_32
+ * TODO: Test error handling  utf32_8
+ * TODO: Test error handling  utf8_32
 */
 
 #include "utft.h"
@@ -254,7 +254,6 @@ static int parse_8_2lit(unsigned char r_char[], int r_nbytes, unsigned char conv
 }
 
 static int next_char_8(FILE * f, unsigned char c[]){
-    //TODO: Needs better testing;
     unsigned char r_char, mask;
     int err, nbytes;
 
