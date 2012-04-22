@@ -149,6 +149,7 @@ static int big2lit (unsigned int c){
         new[3-i] = real[i];
     return *(unsigned int *)new;
 }
+
 static int parse_32_big(unsigned int c, unsigned char conv[]){
     return parse_32_lit(big2lit(c), conv);
 }
@@ -156,14 +157,14 @@ static int parse_32_big(unsigned int c, unsigned char conv[]){
 int utf32_8(FILE *in_file, FILE *out_file){
     unsigned int r_char;
     unsigned char conv[5]; // maximum of 4 bytes in a utf-8 + EOS
-    int (*parse_32)(unsigned int, unsigned char []);
+    int (*parse)(unsigned int, unsigned char []);
 
     // sets callback accordingly while checking for possible errors
     switch(endian(in_file)){
         case 'L':
-            parse_32 = parse_32_lit; break;
+            parse = parse_32_lit; break;
         case 'B':
-            parse_32 = parse_32_big; break;
+            parse = parse_32_big; break;
         default:
             return -1;
     }
@@ -173,7 +174,7 @@ int utf32_8(FILE *in_file, FILE *out_file){
         if (r_char == ERR_READ) //could not read
             return -1;
 
-        if (parse_32(r_char, conv) == ERR_PARSE){ // bad character
+        if (parse(r_char, conv) == ERR_PARSE){ // bad character
             fprintf(stderr, "Erro! Caracter UTF-32 invalido na posicao %ld: %.8x\n", ftell(in_file), r_char);
             return -1;
         }
@@ -191,7 +192,19 @@ int utf32_8(FILE *in_file, FILE *out_file){
 
 /****************** Begin utf8_32 *******************/
 
-static int parse_8_2lit(unsigned char r_char[], int r_nbytes, unsigned char conv[]){
+static int write_endian(FILE *out, int is_big){
+    char big[4] = {'\0'  , '\0'  , '\376', '\377'};
+    char lit[4] = {'\377', '\376', '\0'  , '\0'};
+    char *seq = is_big ? big : lit;
+    fwrite(seq, 1, 4, out);
+    if (ferror(out)){ //could not write
+        perror("Erro ao escrever arquivo.\n");
+        return ERR_WRITE;
+    }
+    return SUCCESS;
+}
+
+static int parse_8_2big(unsigned char r_char[], int r_nbytes, unsigned char conv[]){
     switch(r_nbytes){
         case 1:
             memset(conv, 0, 3); //first 3 bytes are 0
@@ -221,6 +234,22 @@ static int parse_8_2lit(unsigned char r_char[], int r_nbytes, unsigned char conv
             break;
     }
 
+    return SUCCESS;
+}
+
+static void big2lit_vec (unsigned char big[], unsigned char lit[]){
+    int i;
+    for (i=0; i<4; i++)
+        lit[3-i] = big[i];
+}
+
+static int parse_8_2lit(unsigned char r_char[], int r_nbytes, unsigned char conv[]){
+    int err;
+    unsigned char conv2[4];
+    if ((err = parse_8_2big(r_char, r_nbytes, conv2)) != SUCCESS)
+        return err;
+
+    big2lit_vec(conv2, conv);
     return SUCCESS;
 }
 
@@ -256,13 +285,23 @@ static int next_char_8(FILE * f, unsigned char c[]){
 int utf8_32(FILE *in_file, FILE *out_file, int order){
     unsigned char r_char[4], conv[4];
     int r_nbytes;
+    int (*parse)(unsigned char[], int, unsigned char []) = order ? parse_8_2big : parse_8_2lit;
+
+    if (write_endian(out_file, order) != SUCCESS)
+        return -1;
 
     if ((r_nbytes = next_char_8(in_file, r_char)) < 0)
         return -1;  
 
     while(!(feof(in_file))){
-        if (parse_8_2lit(r_char, r_nbytes, conv) == ERR_PARSE){
+        if (parse(r_char, r_nbytes, conv) == ERR_PARSE){
             fprintf(stderr, "Erro! Caracter UTF-8 invalido na posicao %ld:\n", ftell(in_file));
+            return -1;
+        }
+
+        fwrite(conv, 1, 4, out_file);
+        if (ferror(out_file)){ //could not write
+            perror("Erro ao escrever arquivo.\n");
             return -1;
         }
 
