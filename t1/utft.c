@@ -201,13 +201,18 @@ static int parse_8_2lit(unsigned char r_char[], int r_nbytes, unsigned char conv
             memset(conv, 0, 2); //first two bytes are 0
             conv[2] = (r_char[0] >> 2) & 0x07u;
             conv[3] = ((r_char[0] & 0x03u) << 6) | (r_char[1] & 0x3fu);
+            break;
+        case 3:
+            memset(conv, 0, 2); //first two bytes are 0
+            conv[2] = (r_char[0] << 4) | ((r_char[1] >> 2) & 0x0fu);
+            conv[3] = (r_char[1] << 6) | (r_char[2] & 0x3fu);
+            break;
+        case 4:
 
             printf("Got:  "); dump_char(r_char, r_nbytes, NULL);
             printf("Conv: "); dump_char(conv, 4, NULL);
             getchar();
-            break;
-        case 3:
-        case 4:
+
             break;
     }
     conv[4] = '\0';
