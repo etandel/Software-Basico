@@ -208,6 +208,11 @@ static int parse_8_2lit(unsigned char r_char[], int r_nbytes, unsigned char conv
             conv[3] = (r_char[1] << 6) | (r_char[2] & 0x3fu);
             break;
         case 4:
+            //TODO: test
+            conv[0] = 0; //first byte is 0
+            conv[1] = ((r_char[0] & 0x07u) << 2) | ((r_char[1] & 0x30u) >> 4);
+            conv[2] = (r_char[1] << 4) | ((r_char[2] & 0x3cu) >> 2);
+            conv[3] = (r_char[2] << 6) | (r_char[3] & 0x3du);
 
             printf("Got:  "); dump_char(r_char, r_nbytes, NULL);
             printf("Conv: "); dump_char(conv, 4, NULL);
@@ -215,7 +220,6 @@ static int parse_8_2lit(unsigned char r_char[], int r_nbytes, unsigned char conv
 
             break;
     }
-    conv[4] = '\0';
 
     return SUCCESS;
 }
@@ -250,7 +254,7 @@ static int next_char_8(FILE * f, unsigned char c[]){
 }
 
 int utf8_32(FILE *in_file, FILE *out_file, int order){
-    unsigned char r_char[4], conv[5];
+    unsigned char r_char[4], conv[4];
     int r_nbytes;
 
     if ((r_nbytes = next_char_8(in_file, r_char)) < 0)
