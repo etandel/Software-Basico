@@ -11,27 +11,27 @@
 // so are they (though EOF is usually -1)
 #define ERR_READ  EOF-1 // probably -2
 #define ERR_WRITE EOF-2 // probably -3
-#define ERR_PARSE 0     // error when read character is not valid UTF
-#define ERR_END   EOF-3 // error when file's endian is not valid
+#define ERR_PARSE EOF-3     // error when read character is not valid UTF
+#define ERR_END   EOF-4 // error when file's endian is not valid
 #define SUCCESS   1     //everything went smooth
 
-void dump_char (void *p, int n, char *sep) {
-  unsigned char *p1 = p;
-  sep = sep ? sep : " ";
-  while (n--) {
-    printf("%02x%s", *p1, sep);
-    p1++;
-  }
-  puts("");
+void dump_char (void *p, int n, char *sep){
+    unsigned char *p1 = p;
+    sep = sep ? sep : " ";
+    while (n--) {
+        printf("%02x%s", *p1, sep);
+        p1++;
+    }
+    puts("");
 }
 
-void dump (void *p, int n) {
-  unsigned char *p1 = p;
-  while (n--) {
-    printf("%p - %02x\n", p1, *p1);
-    p1++;
-  }
-  puts("");
+void dump (void *p, int n){
+    unsigned char *p1 = p;
+    while (n--) {
+        printf("%p - %02x\n", p1, *p1);
+        p1++;
+    }
+    puts("");
 }
 
 static size_t fread_32(FILE *f, void *arr){
@@ -205,6 +205,13 @@ static int write_endian(FILE *out, int is_big){
 }
 
 static int parse_8_2big(unsigned char r_char[], int r_nbytes, unsigned char conv[]){
+    int i;
+
+    // if nbytes > 1, checks if every byte is 10xx xxxx
+    for (i=1; i<r_nbytes; i++)
+        if ((r_char[i] & 0xc0u) != 0x80u)
+            return ERR_PARSE;
+
     switch(r_nbytes){
         case 1:
             memset(conv, 0, 3); //first 3 bytes are 0
@@ -266,7 +273,7 @@ static int next_char_8(FILE * f, unsigned char c[]){
     //counts number of bytes on utf8 character
     for (nbytes=0, mask=0x80u; r_char & mask; mask>>=1, nbytes++);
     //invalid char or something went wrong
-    if (nbytes > 4){
+    if (nbytes == 1 || nbytes > 4){
         fprintf(stderr, "Erro! Caracter UTF-8 invalido na posicao %ld:\n", ftell(f));
         return ERR_PARSE;
     }
@@ -290,7 +297,7 @@ int utf8_32(FILE *in_file, FILE *out_file, int order){
         return -1;
 
     if ((r_nbytes = next_char_8(in_file, r_char)) < 0)
-        return -1;  
+        return -1;
 
     while(!(feof(in_file))){
         if (parse(r_char, r_nbytes, conv) == ERR_PARSE){
@@ -304,8 +311,9 @@ int utf8_32(FILE *in_file, FILE *out_file, int order){
             return -1;
         }
 
-        if ((r_nbytes = next_char_8(in_file, r_char)) < 0)
-            return -1;  
+        r_nbytes = next_char_8(in_file, r_char);
+        if (r_nbytes == ERR_PARSE && r_nbytes == ERR_READ)
+            return -1;
     }
 
     return 0;
