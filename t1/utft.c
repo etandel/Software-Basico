@@ -34,11 +34,6 @@ void dump (void *p, int n){
     puts("");
 }
 
-static size_t fread_32(FILE *f, void *arr){
-    //reads 1 array of 4 bytes from f and store it in arr
-    return fread(arr, 1, 4, f);
-}
-
 static int get_err(FILE *f){
     int err = SUCCESS;
     if (ferror(f)){
@@ -56,7 +51,7 @@ static char endian(FILE * f){
     char big[4] = {'\0'  , '\0'  , '\376', '\377'};
     char lit[4] = {'\377', '\376', '\0'  , '\0'};
     
-    fread_32(f, read);
+    fread(read, 1, 4, f);
 
     //if everything's ok
     if ((ret = get_err(f)) == SUCCESS){
@@ -83,16 +78,16 @@ static char endian(FILE * f){
     return ret;
 }
 
-static unsigned int next_char_32(FILE *in_file){
-    unsigned int c;
+static int next_char_32(FILE *in_file, unsigned char c[]){
     int err;
-    fread_32(in_file, &c);
+    fread(c, 1, 4, in_file);
     if ((err = get_err(in_file)) != SUCCESS)
         return err;
-    return c;
+    return SUCCESS;
 }
 
-static int interval_32_lit (unsigned int c){
+static int interval_32_lit (unsigned char r_char[]){
+    unsigned int c = *(unsigned int *)r_char;
     int ret;
     if      (c < 0 || c > 0x10ffffu) { //out of bounds
         ret = ERR_PARSE;
@@ -108,31 +103,30 @@ static int interval_32_lit (unsigned int c){
     return ret;
 }
 
-static int parse_32_lit (unsigned int c, unsigned char conv[]){
-    int inter = interval_32_lit(c);
-    unsigned char * ch = (unsigned char*)&c;
+static int parse_32_lit (unsigned char r_char[], unsigned char conv[]){
+    int inter = interval_32_lit(r_char);
 
     switch(inter) {
         case 1:
-            conv[0] = 0 | ch[0]; //begins with 0 and the rest is the utf code
+            conv[0] = 0 | r_char[0]; //begins with 0 and the rest is the utf code
             conv[1] = 0;     //EOS
             break;
         case 2:
-            conv[0] = (ch[0] >> 6) | (ch[1] << 2) | 0xc0u;
-            conv[1] = (ch[0] & 0x3fu) | 0x80u;
+            conv[0] = (r_char[0] >> 6) | (r_char[1] << 2) | 0xc0u;
+            conv[1] = (r_char[0] & 0x3fu) | 0x80u;
             conv[2] = 0;     //EOS
             break;
         case 3:
-            conv[0] = ((ch[1] & 0xf0u) >> 4) | 0xe0u;
-            conv[1] = (ch[0] >> 6) | ((ch[1] & 0x0fu) << 2) | 0x80u;
-            conv[2] = (ch[0] & 0x3fu) | 0x80u;
+            conv[0] = ((r_char[1] & 0xf0u) >> 4) | 0xe0u;
+            conv[1] = (r_char[0] >> 6) | ((r_char[1] & 0x0fu) << 2) | 0x80u;
+            conv[2] = (r_char[0] & 0x3fu) | 0x80u;
             conv[3] = 0;     //EOS
             break;
         case 4:
-            conv[0] = ((ch[2] & 0x1cu) >> 2) | 0xf0u;
-            conv[1] = ((ch[1] & 0xf0u) >> 4) | (ch[2] & 0x03u) | 0x80u ;
-            conv[2] = (ch[0] >> 6) | ((ch[1] & 0x0fu) << 2) | 0x80u;
-            conv[3] = (ch[0] & 0x3fu) | 0x80u;
+            conv[0] = ((r_char[2] & 0x1cu) >> 2) | 0xf0u;
+            conv[1] = ((r_char[1] & 0xf0u) >> 4) | (r_char[2] & 0x03u) | 0x80u ;
+            conv[2] = (r_char[0] >> 6) | ((r_char[1] & 0x0fu) << 2) | 0x80u;
+            conv[3] = (r_char[0] & 0x3fu) | 0x80u;
             conv[4] = 0;     //EOS
             break;
         default:
@@ -142,22 +136,23 @@ static int parse_32_lit (unsigned int c, unsigned char conv[]){
     return inter;           
 }
 
-static int big2lit (unsigned int c){
-    unsigned char new[4], *real = (unsigned char*)&c; 
+static void big2lit (unsigned char big[], unsigned char lit[]){
     int i;
     for (i=0; i<4; i++)
-        new[3-i] = real[i];
-    return *(unsigned int *)new;
+        lit[3-i] = big[i];
 }
 
-static int parse_32_big(unsigned int c, unsigned char conv[]){
-    return parse_32_lit(big2lit(c), conv);
+static int parse_32_big(unsigned char c[], unsigned char conv[]){
+    unsigned char lit[4];
+    big2lit(c, lit);
+    return parse_32_lit(lit, conv);
 }
 
 int utf32_8(FILE *in_file, FILE *out_file){
-    unsigned int r_char;
+    int err;
+    unsigned char r_char[4];
     unsigned char conv[5]; // maximum of 4 bytes in a utf-8 + EOS
-    int (*parse)(unsigned int, unsigned char []);
+    int (*parse)(unsigned char[], unsigned char []);
 
     // sets callback accordingly while checking for possible errors
     switch(endian(in_file)){
@@ -169,13 +164,13 @@ int utf32_8(FILE *in_file, FILE *out_file){
             return -1;
     }
 
-    r_char = next_char_32(in_file);
-    while (r_char != EOF) {
-        if (r_char == ERR_READ) //could not read
+    err = next_char_32(in_file, r_char);
+    while (err != EOF) {
+        if (err == ERR_READ) //could not read
             return -1;
 
         if (parse(r_char, conv) == ERR_PARSE){ // bad character
-            fprintf(stderr, "Erro! Caracter UTF-32 invalido na posicao %ld: %.8x\n", ftell(in_file), r_char);
+            fprintf(stderr, "Erro! Caracter UTF-32 invalido na posicao %ld.\n", ftell(in_file));
             return -1;
         }
 
@@ -184,7 +179,7 @@ int utf32_8(FILE *in_file, FILE *out_file){
             perror("Erro ao escrever arquivo:\n");
             return -1;
         }
-        r_char = next_char_32(in_file);
+        err = next_char_32(in_file, r_char);
     }
 
     return 0;
@@ -244,19 +239,13 @@ static int parse_8_2big(unsigned char r_char[], int r_nbytes, unsigned char conv
     return SUCCESS;
 }
 
-static void big2lit_vec (unsigned char big[], unsigned char lit[]){
-    int i;
-    for (i=0; i<4; i++)
-        lit[3-i] = big[i];
-}
-
 static int parse_8_2lit(unsigned char r_char[], int r_nbytes, unsigned char conv[]){
     int err;
     unsigned char conv2[4];
     if ((err = parse_8_2big(r_char, r_nbytes, conv2)) != SUCCESS)
         return err;
 
-    big2lit_vec(conv2, conv);
+    big2lit(conv2, conv);
     return SUCCESS;
 }
 
