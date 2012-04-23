@@ -5,7 +5,7 @@ CFLAGS=-I$(IDIR) -Wall -ggdb
 ODIR=obj
 LDIR=../lib
 
-LIBS=-lm
+LIBS=
 
 _DEPS = utft.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
