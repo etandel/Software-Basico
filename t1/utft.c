@@ -1,3 +1,6 @@
+/*Elias Tandel Barrionovo  1010270*/
+/*João Pedro Fabris Campos 1010273*/
+
 #include "utft.h"
 #include <stdio.h>
 #include <string.h>
