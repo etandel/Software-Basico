@@ -1,0 +1,17 @@
+Relatório T1 - Software Básico 
+
+/* Elias Tandel Barrionovo  1010270 3WA*/
+/* João Pedro Fabris Campos 1010273 3WA*/
+
+Todas as funções do módulo utft paracem funcionar como o esperado. Todos os arquivos de entrada válidos produziram
+arquivos de saída válidos e corretos. Também foram detectados erros em todos os arquivos de entrada inválidos.
+
+O programa é capaz de detectar os seguintes erros no arquivo de entrada:
+    Para utf32_8:
+        - Início do arquivo não possui uma sequência válida de bytes para marcar o endian
+          (essse erro é detectado na função endian)
+    Para utf8_32:
+        - Primeiro byte não é de uma das formas 0xxx xxxx ; 110x xxxx ; 1110 xxxx ; 1111 0xxx
+          (esse erro é detectado na função next_char_8)
+        - Bytes seguintes (quando a representação utf8 demanda n>1 bytes) não são da forma 10xx xxxx
+          (esse erro é detectado com um for no início da função parse_8_2big).
