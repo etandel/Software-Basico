@@ -160,6 +160,7 @@ int utf32_8(FILE *in_file, FILE *out_file){
         case 'B':
             parse = parse_32_big; break;
         default:
+            printf("Erro! Caracter UTF-32 invalido na posicao %ld.\n", ftell(in_file));
             return -1;
     }
 
