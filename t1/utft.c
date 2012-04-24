@@ -1,21 +1,17 @@
-/* 
- * TODO: Test error handling  utf32_8
- * TODO: Test error handling  utf8_32
-*/
-
 #include "utft.h"
 #include <stdio.h>
 #include <string.h>
 
-// macros for errors; since EOF is system dependent,
-// so are they (though EOF is usually -1)
+// macros for errors; though EOF is system dependent,
+// it is defined as negative, so all errors are < 0.
 #define ERR_READ  EOF-1 // probably -2
 #define ERR_WRITE EOF-2 // probably -3
-#define ERR_PARSE EOF-3     // error when read character is not valid UTF
+#define ERR_PARSE EOF-3 // error when read character is not valid UTF
 #define ERR_END   EOF-4 // error when file's endian is not valid
 #define SUCCESS   1     //everything went smooth
 
-void dump_char (void *p, int n, char *sep){
+//Imprime o conteudo de certo endereço de memoria (apenas para debug)
+static void dump_char (void *p, int n, char *sep){
     unsigned char *p1 = p;
     sep = sep ? sep : " ";
     while (n--) {
@@ -25,15 +21,8 @@ void dump_char (void *p, int n, char *sep){
     puts("");
 }
 
-void dump (void *p, int n){
-    unsigned char *p1 = p;
-    while (n--) {
-        printf("%p - %02x\n", p1, *p1);
-        p1++;
-    }
-    puts("");
-}
-
+//Caso exista algum erro no arquivo, imprime e retorna erro
+//No caso de EOF, apenas retoran EOF sem imprimir
 static int get_err(FILE *f){
     int err = SUCCESS;
     if (ferror(f)){
@@ -45,6 +34,7 @@ static int get_err(FILE *f){
     return err;
 }
 
+//Descobre se a ordenação do arquivo utf-32 é big endian ou little endian
 static char endian(FILE * f){
     char ret;
     char read[4];
@@ -78,6 +68,7 @@ static char endian(FILE * f){
     return ret;
 }
 
+//Coloca no parametro 'c' o valor do próximo caracter UTF-32
 static int next_char_32(FILE *in_file, unsigned char c[]){
     int err;
     fread(c, 1, 4, in_file);
@@ -86,6 +77,7 @@ static int next_char_32(FILE *in_file, unsigned char c[]){
     return SUCCESS;
 }
 
+//Retorna em que intervalo de representação de UTF-32 o caracter lido está
 static int interval_32_lit (unsigned char r_char[]){
     unsigned int c = *(unsigned int *)r_char;
     int ret;
@@ -103,6 +95,7 @@ static int interval_32_lit (unsigned char r_char[]){
     return ret;
 }
 
+//"Entende" (atraves da func anterior) e converte o caracter lido com ordenação little endian para UTF-8
 static int parse_32_lit (unsigned char r_char[], unsigned char conv[]){
     int inter = interval_32_lit(r_char);
 
@@ -136,12 +129,15 @@ static int parse_32_lit (unsigned char r_char[], unsigned char conv[]){
     return inter;           
 }
 
+//Altera a endianness de c
 static void big2lit (unsigned char big[], unsigned char lit[]){
     int i;
     for (i=0; i<4; i++)
         lit[3-i] = big[i];
 }
 
+//Converte o caracter UTF-32 the big para little endian
+//e entao usa a parse_32_lit
 static int parse_32_big(unsigned char c[], unsigned char conv[]){
     unsigned char lit[4];
     big2lit(c, lit);
@@ -187,6 +183,7 @@ int utf32_8(FILE *in_file, FILE *out_file){
 
 /****************** Begin utf8_32 *******************/
 
+//Escreve na saida a sequencia caracteristica de big ou little endian
 static int write_endian(FILE *out, int is_big){
     char big[4] = {'\0'  , '\0'  , '\376', '\377'};
     char lit[4] = {'\377', '\376', '\0'  , '\0'};
@@ -199,6 +196,7 @@ static int write_endian(FILE *out, int is_big){
     return SUCCESS;
 }
 
+//Converte de UTF-8 para UTF-32 com ordenação big endian
 static int parse_8_2big(unsigned char r_char[], int r_nbytes, unsigned char conv[]){
     int i;
 
@@ -223,7 +221,6 @@ static int parse_8_2big(unsigned char r_char[], int r_nbytes, unsigned char conv
             conv[3] = (r_char[1] << 6) | (r_char[2] & 0x3fu);
             break;
         case 4:
-            //TODO: test
             conv[0] = 0; //first byte is 0
             conv[1] = ((r_char[0] & 0x07u) << 2) | ((r_char[1] & 0x30u) >> 4);
             conv[2] = (r_char[1] << 4) | ((r_char[2] & 0x3cu) >> 2);
@@ -239,6 +236,8 @@ static int parse_8_2big(unsigned char r_char[], int r_nbytes, unsigned char conv
     return SUCCESS;
 }
 
+//Converte o caracter UTF-8 para UTF-32 big endian
+//e entao modifica sua ordenação para little endian
 static int parse_8_2lit(unsigned char r_char[], int r_nbytes, unsigned char conv[]){
     int err;
     unsigned char conv2[4];
@@ -249,6 +248,7 @@ static int parse_8_2lit(unsigned char r_char[], int r_nbytes, unsigned char conv
     return SUCCESS;
 }
 
+//Le o proximo caracter utf-8 e retorna o numero de bytes que o caracter em UTF-8 ocupa
 static int next_char_8(FILE * f, unsigned char c[]){
     unsigned char r_char, mask;
     int err, nbytes;
