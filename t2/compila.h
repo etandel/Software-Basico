@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-typedef int (*funcp) ();
+typedef int (*funcp) (void);
 funcp compila (FILE *f);
 
 #endif
