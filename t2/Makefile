@@ -1,6 +1,6 @@
 IDIR =.
 CC=gcc
-CFLAGS=-I$(IDIR) -Wall -ggdb
+CFLAGS=-I$(IDIR) -Wall -ggdb -Wa,--execstack
 
 ODIR=obj
 LDIR=../lib
@@ -26,4 +26,5 @@ clean:
 	rm -f test *.txt $(ODIR)/*.o *~ core $(INCDIR)/*~
 
 config:
+	chmod +x test.sh
 	[ -d obj ] || mkdir obj
