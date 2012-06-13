@@ -2,6 +2,8 @@
 /*João Pedro Fabris Campos 1010273 3WA*/
 
 #include "compila.h"
+#include <assert.h>
+#include <stdlib.h>
 
 static union integer {
     unsigned char c[4];
@@ -12,18 +14,17 @@ typedef union integer Int;
 funcp compila(FILE *src){
     int i, ret_val;
     size_t code_size = 12;
+    unsigned char gab[12] = {0x55U,0x89U, 0xe5U, 0x89U, 0xecU, 0x5dU, 0xc3U};
 
+    unsigned char *code = (unsigned char*)malloc(code_size*sizeof(unsigned char));
     // inital push and move
-    unsigned char code[12] = {0x55U,0x89U, 0xe5U};
+    for (i=0; i<7; i++)
+        code[i] = gab[i];
 
+/*
     assert(fscanf(src, "ret $%d", &ret_val));
     *(int*)(code+3) = ret_val;
-
-    // final move and pop and ret
-    code[code_size-3] = 0x89U;
-    code[code_size-2] = 0xecU
-    code[code_size-1] = 0x5dU
-    code[code_size]   = 0xc3U;
+*/
 
     return (funcp)code;
 }
