@@ -12,19 +12,23 @@ static union integer {
 typedef union integer Int;
 
 funcp compila(FILE *src){
-    int i, ret_val;
+    int offset=0, ret_val, i;
     size_t code_size = 12;
-    unsigned char gab[12] = {0x55U,0x89U, 0xe5U, 0x89U, 0xecU, 0x5dU, 0xc3U};
+    unsigned char
+        begin[3] = {0x55U,0x89U, 0xe5U},
+        end[4] = {0x89U, 0xecU, 0x5dU, 0xc3U};
 
     unsigned char *code = (unsigned char*)malloc(code_size*sizeof(unsigned char));
-    // inital push and move
-    for (i=0; i<7; i++)
-        code[i] = gab[i];
 
-/*
-    assert(fscanf(src, "ret $%d", &ret_val));
-    *(int*)(code+3) = ret_val;
-*/
+    // inital push and move
+    for (i=0; i<3; i++, offset++)
+        code[offset] = begin[i];
+
+    //assert(fscanf(src, "ret $%d", &ret_val));
+
+    // final move, push and ret
+    for (i=0; i<4; i++, offset++)
+        code[offset] = end[i];
 
     return (funcp)code;
 }
