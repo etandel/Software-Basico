@@ -12,8 +12,10 @@ static union integer {
 typedef union integer Int;
 
 funcp compila(FILE *src){
-    int offset=0, ret_val, i;
+    int offset=0, i;
     size_t code_size = 12;
+
+    Int ret_val;
     unsigned char
         begin[3] = {0x55U,0x89U, 0xe5U},
         end[4] = {0x89U, 0xecU, 0x5dU, 0xc3U};
@@ -24,7 +26,12 @@ funcp compila(FILE *src){
     for (i=0; i<3; i++, offset++)
         code[offset] = begin[i];
 
-    //assert(fscanf(src, "ret $%d", &ret_val));
+    fscanf(src, "ret $%d", &ret_val);
+    code[offset++] = 0xb8U;
+
+    for (i=0; i<4; i++, offset++) \
+        code[offset] = ret_val.c[i];
+
 
     // final move, push and ret
     for (i=0; i<4; i++, offset++)
