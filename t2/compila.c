@@ -34,7 +34,8 @@ static void cpy_int(int *i, unsigned char *code, int *offset){
 
 static void do_attr(FILE *src, unsigned char *code, int *offset){
     int attval, os = *offset;
-    fscanf(src, "0 = $%d", &attval);
+    int var_index;
+    fscanf(src, "%d = $%d", &var_index, &attval);
 
     // alocate local int
     code[os++] = 0x83U;
