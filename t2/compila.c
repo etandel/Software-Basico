@@ -32,6 +32,29 @@ static void cpy_int(int *i, unsigned char *code, int *offset){
     *offset += 4;
 }
 
+static void do_attr(FILE *src, unsigned char *code, int *offset){
+    int attval, os = *offset;
+    fscanf(src, "0 = $%d", &attval);
+
+    // alocate local int
+    code[os++] = 0x83U;
+    code[os++] = 0xecU; //subtract char const from %esp
+    code[os++] = (char)4; //the const is 4 (sizeof(int));
+
+    // move att'd value to local var0
+    code[os++] = 0xc7U;
+    code[os++] = 0x45U; // move val to %ebp+const
+    code[os++] = (char)-4; //const is -4 (var0 is the first int)
+    cpy_int(&attval, code, &os);
+
+    // move local var0 to %eax (ret)
+    code[os++] = 0x8bU;
+    code[os++] = 0x45U; // move from addres %ebp+const 
+    code[os++] = (char)-4; //const is -4 (var0 is the first int)
+
+    *offset = os;
+}
+
 funcp compila(FILE *src){
     int offset=0, i;
     size_t code_size = 50;
@@ -44,25 +67,7 @@ funcp compila(FILE *src){
     set_head(code, &offset);
 
     if ((c=fgetc(src)) == 'v'){
-        // att
-        fscanf(src, "0 = $%d", &ret_val);
-
-        // alocate local int
-        code[offset++] = 0x83U;
-        code[offset++] = 0xecU; //subtract char const from %esp
-        code[offset++] = (char)4; //the const is 4 (sizeof(int));
-
-        // move att'd value to local var0
-        code[offset++] = 0xc7U;
-        code[offset++] = 0x45U; // move val to %ebp+const
-        code[offset++] = (char)-4; //const is -4 (var0 is the first int)
-        cpy_int(&ret_val, code, &offset);
-
-        // move local var0 to %eax (ret)
-        code[offset++] = 0x8bU;
-        code[offset++] = 0x45U; // move from addres %ebp+const 
-        code[offset++] = (char)-4; //const is -4 (var0 is the first int)
-        
+        do_attr(src, code, &offset);
     }
     else {
         //return constant
