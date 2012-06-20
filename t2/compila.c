@@ -73,11 +73,13 @@ funcp compila(FILE *src){
 
     set_head(code, &offset);
 
-    if ((c=fgetc(src)) == 'v'){
-        do_attr(src, code, &offset);
-    }
-    else {
-        do_ret(src, code, &offset);
+    switch (c=fgetc(src)){
+        case 'r':
+            do_ret(src, code, &offset);
+            break;
+        case 'v':
+            do_attr(src, code, &offset);
+            break;
     }
 
     set_tail(code, &offset);
