@@ -55,6 +55,13 @@ static void do_attr(FILE *src, unsigned char *code, int *offset){
     *offset = os;
 }
 
+static void do_ret(FILE *src, unsigned char *code, int *offset){
+    int ret_val;
+    fscanf(src, "et $%d", &ret_val);
+    code[(*offset)++] = 0xb8U;
+    cpy_int(&ret_val, code, offset);
+}
+
 funcp compila(FILE *src){
     int offset=0, i;
     size_t code_size = 50;
@@ -70,10 +77,7 @@ funcp compila(FILE *src){
         do_attr(src, code, &offset);
     }
     else {
-        //return constant
-        fscanf(src, "et $%d", &ret_val);
-        code[offset++] = 0xb8U;
-        cpy_int(&ret_val, code, &offset);
+        do_ret(src, code, &offset);
     }
 
     set_tail(code, &offset);
