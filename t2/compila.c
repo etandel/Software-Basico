@@ -13,17 +13,22 @@ static void dump(unsigned char *c, size_t n){
     
 }
 
-void set_head(unsigned char *code, int *offset){
+static void set_head(unsigned char *code, int *offset){
     // inital push and move
     unsigned char begin[3] = {0x55U,0x89U, 0xe5U};
     memcpy(code+*offset, begin, 3);
     *offset += 3;
 }
 
-void set_tail(unsigned char *code, int *offset){
+static void set_tail(unsigned char *code, int *offset){
     // final move, push and ret
     unsigned char end[4] = {0x89U, 0xecU, 0x5dU, 0xc3U};
     memcpy(code+*offset, end, 4);
+    *offset += 4;
+}
+
+static void cpy_int(int *i, unsigned char *code, int *offset){
+    memcpy(code+*offset, i, sizeof(int)); //cpy val
     *offset += 4;
 }
 
@@ -51,8 +56,7 @@ funcp compila(FILE *src){
         code[offset++] = 0xc7U;
         code[offset++] = 0x45U; // move val to %ebp+const
         code[offset++] = (char)-4; //const is -4 (var0 is the first int)
-        memcpy(code+offset, &ret_val, sizeof(int)); //cpy val
-        offset += 4;
+        cpy_int(&ret_val, code, &offset);
 
         // move local var0 to %eax (ret)
         code[offset++] = 0x8bU;
@@ -64,8 +68,7 @@ funcp compila(FILE *src){
         //return constant
         fscanf(src, "et $%d", &ret_val);
         code[offset++] = 0xb8U;
-        memcpy(code+offset, &ret_val, sizeof(int));
-        offset += 4;
+        cpy_int(&ret_val, code, &offset);
     }
 
     set_tail(code, &offset);
