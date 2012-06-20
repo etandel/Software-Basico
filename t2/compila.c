@@ -79,6 +79,7 @@ funcp compila(FILE *src){
             do_ret(src, code, &offset);
             break;
         case 'v':
+        case 'p':
             do_attr(src, code, &offset);
             break;
     }
