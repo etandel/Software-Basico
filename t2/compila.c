@@ -29,7 +29,8 @@ void set_tail(unsigned char *code, int *offset){
 
 funcp compila(FILE *src){
     int offset=0, i;
-    size_t code_size = 12;
+    size_t code_size = 50;
+    char c;
 
     int ret_val;
     
@@ -37,10 +38,35 @@ funcp compila(FILE *src){
 
     set_head(code, &offset);
 
-    fscanf(src, "ret $%d", &ret_val);
-    code[offset++] = 0xb8U;
-    memcpy(code+offset, &ret_val, sizeof(int));
-    offset += 4;
+    if ((c=fgetc(src)) == 'v'){
+        // att
+        fscanf(src, "0 = $%d", &ret_val);
+
+        // alocate local int
+        code[offset++] = 0x83U;
+        code[offset++] = 0xecU; //subtract char const from %esp
+        code[offset++] = (char)4; //the const is 4 (sizeof(int));
+
+        // move att'd value to local var0
+        code[offset++] = 0xc7U;
+        code[offset++] = 0x45U; // move val to %ebp+const
+        code[offset++] = (char)-4; //const is -4 (var0 is the first int)
+        memcpy(code+offset, &ret_val, sizeof(int)); //cpy val
+        offset += 4;
+
+        // move local var0 to %eax (ret)
+        code[offset++] = 0x8bU;
+        code[offset++] = 0x45U; // move from addres %ebp+const 
+        code[offset++] = (char)-4; //const is -4 (var0 is the first int)
+        
+    }
+    else {
+        //return constant
+        fscanf(src, "et $%d", &ret_val);
+        code[offset++] = 0xb8U;
+        memcpy(code+offset, &ret_val, sizeof(int));
+        offset += 4;
+    }
 
     set_tail(code, &offset);
 
