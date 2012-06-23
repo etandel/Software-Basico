@@ -146,7 +146,7 @@ static void do_ret(FILE *src, unsigned char *code, int *offset){
 
 funcp compila(FILE *src){
     int offset=0;
-    size_t code_size = 50;
+    size_t code_size = 100;
     char c;
     
     unsigned char *code = (unsigned char*)malloc(code_size*sizeof(unsigned char));
