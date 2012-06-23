@@ -1,0 +1,21 @@
+
+move_const_to_reg.o:     file format elf32-i386
+
+   0:	b9 04 00 00 00       	mov    $0x4,%ecx
+   5:	b9 ff ff ff ff       	mov    $0xffffffff,%ecx
+   a:	b9 9c e6 ff ff       	mov    $0xffffe69c,%ecx
+   f:	b8 04 00 00 00       	mov    $0x4,%eax
+  14:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
+  19:	b8 9c e6 ff ff       	mov    $0xffffe69c,%eax
+
+
+**************
+
+move_offset_to_reg.o:     file format elf32-i386
+
+   0:	8b 45 fc             	mov    -0x4(%ebp),%eax
+   3:	8b 45 e0             	mov    -0x20(%ebp),%eax
+   6:	8b 45 b0             	mov    -0x50(%ebp),%eax
+   9:	8b 4d fc             	mov    -0x4(%ebp),%ecx
+   c:	8b 4d e0             	mov    -0x20(%ebp),%ecx
+   f:	8b 4d b0             	mov    -0x50(%ebp),%ecx

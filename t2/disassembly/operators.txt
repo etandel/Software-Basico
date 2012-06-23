@@ -1,0 +1,10 @@
+
+operators.o:     file format elf32-i386
+
+
+Disassembly of section .text:
+
+00000000 <.text>:
+   0:	01 c8                	add    %ecx,%eax
+   2:	29 c8                	sub    %ecx,%eax
+   4:	0f af c1             	imul   %ecx,%eax
