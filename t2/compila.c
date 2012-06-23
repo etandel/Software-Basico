@@ -60,7 +60,7 @@ static void do_attr(FILE *src, unsigned char *code, int *offset, char type){
 static void do_ret(FILE *src, unsigned char *code, int *offset){
     int ret_val;
     int i;
-    char c, bp_offset;
+    char c;
 
     //reads "et x", where x can be $,p,v
     for(i=0; i<4; i++)
@@ -70,20 +70,16 @@ static void do_ret(FILE *src, unsigned char *code, int *offset){
     fscanf(src, "%d", &ret_val);
     
     switch (c){
+        char bp_offset=0;
         case '$': //constant
-            code[(*offset)++] = 0xb8U;
-            cpy_int(&ret_val, code, offset);
+            code[(*offset)++] = 0xb8U; //move constant to eax
+            cpy_int(&ret_val, code, offset); //constant is val on ret_val var
             break;
 
         case 'p': //param
-            bp_offset = (char)(-4*(ret_val+1) - 40);
-            // move local var to %eax
-            code[(*offset)++] = 0x8bU;
-            code[(*offset)++] = 0x45U; // move from addres %ebp+const 
-            code[(*offset)++] = bp_offset; 
-            break;
+            bp_offset = (- 40);
         case 'v': //var
-            bp_offset = (char)(-4*(ret_val+1));
+            bp_offset += (char)(-4*(ret_val+1));
             // move local var to %eax
             code[(*offset)++] = 0x8bU;
             code[(*offset)++] = 0x45U; // move from addres %ebp+const 
