@@ -103,6 +103,7 @@ static void do_attr(FILE *src, unsigned char *code, int *offset){
         case '*':
             code[os++] = 0x0fU;
             code[os++] = 0xafU;
+            code[os++] = 0xc1U;
             break;
     }
 
