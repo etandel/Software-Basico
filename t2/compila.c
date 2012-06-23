@@ -64,26 +64,26 @@ static void do_attr(FILE *src, unsigned char *code, int *offset){
     // move first att'd value to ecx
     if (var1t == '$') {
         //constant
-        code[os++] = MOVL_CONST_TO_ECX;
+        code[os++] = MOVL_CONST_TO_EAX;
         cpy_int(&var1, code, &os);   
     }
     else {
         //local var
         code[os++] = MOVL_FROM_EBP;
-        code[os++] = MOVL_TO_ECX;
+        code[os++] = MOVL_TO_EAX;
         code[os++] = calc_bp_offset(var1t, var1);
     }
 
     // move second att'd cal to eax
     if (var2t == '$') {
         //constant
-        code[os++] = MOVL_CONST_TO_EAX;
+        code[os++] = MOVL_CONST_TO_ECX;
         cpy_int(&var2, code, &os);   
     }
     else {
         //local var
         code[os++] = MOVL_FROM_EBP;
-        code[os++] = MOVL_TO_EAX;
+        code[os++] = MOVL_TO_ECX;
         code[os++] = calc_bp_offset(var2t, var2);
     }
 
@@ -97,7 +97,8 @@ static void do_attr(FILE *src, unsigned char *code, int *offset){
         
         case '-':
             //sub var2 to var1
-            code[os++] = 0x2bU;
+            code[os++] = 0x29U;
+            code[os++] = 0xc8U;
             break;
         case '*':
             code[os++] = 0x0fU;
