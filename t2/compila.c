@@ -15,6 +15,15 @@
 #define MOVL_CONST_TO_EAX 0xb8U
 #define MOVL_CONST_TO_ECX 0xb9U
 
+struct target {
+    unsigned char * address;
+    int line;
+};
+struct target_queue {
+    int i;
+    struct target q[100];
+};
+typedef struct target_queue TargetQueue;
 
 static void dump(unsigned char *c, size_t n){
     unsigned char *p;
@@ -50,8 +59,13 @@ static void cpy_int(int *i, unsigned char *code, int *offset){
 }
 
 char calc_bp_offset(char t, int i){
-    // if v, then offset c [-4,-40]; if p, then offset c [-44,-80]
-    return (char)(-4*(i+1) - (t == 'v' ? 0 : 40));
+    // if v, then offset c [-4,-40]; if p, then offset c [8,48]
+    char os = (char)(4*(i+1));
+    if (t == 'v')
+        os *= -1;
+    else
+        os += 4;
+    return os;
 }
 
 static void do_attr(FILE *src, unsigned char *code, int *offset){
@@ -137,18 +151,65 @@ static void do_ret(FILE *src, unsigned char *code, int *offset){
         case 'v': //var
             // move local var to %eax
             code[(*offset)++] = 0x8bU;
-            code[(*offset)++] = 0x45U; // move from addres %ebp+const 
+            code[(*offset)++] = 0x45U; // move from address %ebp+const 
             code[(*offset)++] = calc_bp_offset(c, ret_val); 
             break;
     }
 
 }
 
+static void do_if(FILE *src, unsigned char *code, int *offset, TargetQueue *queue){
+    char var_t;
+    int less, equal, greater, var_i, os=*offset;
+    fscanf(src, "f %c%d %d %d %d", &var_t, &var_i, &less, &equal, &greater);
+    
+    //cmpl  $0, offset(%ebp)
+    code[os++] = 0x83U; //cmpl
+    code[os++] = 0x7dU; //offset ebp
+    code[os++] = calc_bp_offset(var_t, var_i);
+    code[os++] = (char)0;
+
+    code[os++] = 0x7cU; //jl
+    //code[os] = &code[line_address[less]] - &code[os+1];
+    code[os++] = (char)0;
+    queue->q[queue->i].line = less;
+    queue->q[queue->i].address = (code+os);
+    queue->i++;
+
+    code[os++] = 0x74U; //je
+    //code[os] = &code[line_address[equal]] - &code[os+1];
+    code[os++] = (char)0;
+    queue->q[queue->i].line = equal;
+    queue->q[queue->i].address = (code+os);
+    queue->i++;
+
+    code[os++] = 0x7fU; //jg
+    //code[os] = &code[line_address[greater]] - &code[os+1];
+    code[os++] = (char)0;
+    queue->q[queue->i].line = greater;
+    queue->q[queue->i].address = (code+os);
+    queue->i++;
+
+    *offset = os;
+}
+
+static void set_jmp_addresses(unsigned char *code, TargetQueue *queue, int line_address[]){
+    int i;
+    for (i=0; i<queue->i; i++){
+        unsigned char *add = queue->q[i].address;
+        *add = &code[line_address[queue->q[i].line]] - add;
+    }
+}
+
 funcp compila(FILE *src){
     int offset=0;
-    size_t code_size = 100;
+    size_t code_size = 1000;
     char c;
+    int line_address[100];
+    TargetQueue target_queue;
+    int line_i=0;
     
+    target_queue.i = 0;
     unsigned char *code = (unsigned char*)malloc(code_size*sizeof(unsigned char));
 
     set_head(code, &offset);
@@ -156,17 +217,24 @@ funcp compila(FILE *src){
     while ((c=fgetc(src)) != EOF) {
         switch (c){
             case 'r':
+                line_address[line_i++] = offset;
                 do_ret(src, code, &offset);
                 break;
             case 'v':
             case 'p':
+                line_address[line_i++] = offset;
                 ungetc(c, src);
                 do_attr(src, code, &offset);
+                break;
+            case 'i':
+                line_address[line_i++] = offset;
+                do_if(src, code, &offset, &target_queue);
                 break;
         }
     }
 
     set_tail(code, &offset);
+    set_jmp_addresses(code, &target_queue, line_address);
 
     return (funcp)code;
 }
