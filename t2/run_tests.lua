@@ -12,6 +12,9 @@ local find = string.find
 local function test_sb(filename)
     local sb_out = io.popen(exec .. filename, 'r')
     local ret = sb_out:read()
+    if not ret then
+        print("Error on " .. filename)
+    end
     if not filename:find(ret, 1, true) then
         print(filename .. '\n\t' .. ret)
     end
