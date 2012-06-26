@@ -1,0 +1,37 @@
+
+jmp.o:     file format elf32-i386
+
+
+Disassembly of section .text:
+
+00000000 <L1>:
+   0:	83 ec 04             	sub    $0x4,%esp
+   3:	8b 45 fc             	mov    -0x4(%ebp),%eax
+
+00000006 <L2>:
+   6:	8b 45 fc             	mov    -0x4(%ebp),%eax
+
+00000009 <L3>:
+   9:	01 c8                	add    %ecx,%eax
+   b:	29 c8                	sub    %ecx,%eax
+   d:	0f af c1             	imul   %ecx,%eax
+
+00000010 <l4>:
+  10:	55                   	push   %ebp
+  11:	89 e5                	mov    %esp,%ebp
+  13:	c3                   	ret    
+  14:	83 7d fc 00          	cmpl   $0x0,-0x4(%ebp)
+  18:	74 e6                	je     0 <L1>
+  1a:	7c ea                	jl     6 <L2>
+  1c:	7f eb                	jg     9 <L3>
+  1e:	74 0e                	je     2e <L5>
+  20:	83 7d e0 00          	cmpl   $0x0,-0x20(%ebp)
+  24:	74 e0                	je     6 <L2>
+  26:	7c e1                	jl     9 <L3>
+  28:	0f 8f fc ff ff ff    	jg     2a <l4+0x1a>
+
+0000002e <L5>:
+  2e:	83 7d c8 00          	cmpl   $0x0,-0x38(%ebp)
+  32:	74 d5                	je     9 <L3>
+  34:	7c d0                	jl     6 <L2>
+  36:	7f c8                	jg     0 <L1>
