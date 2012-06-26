@@ -20,6 +20,9 @@ $(ODIR)/%.o: %.c $(DEPS)
 test: $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
+test_params: $(OBJ)
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
 .PHONY: clean config
 
 clean:
